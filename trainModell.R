@@ -77,10 +77,10 @@ track_sd <- list()
 track_1 <- c()
 used1 <- seq_along(obj_static[[1]][['date']])
 # 2090
-#used1 <- used1[used1 > (time_span+interv*2+120+1) & used1 < (get_last_item(used1)-interv) ]
-used1 <- used1[used1 > 3000 & used1 < 3250]
+used1 <- used1[used1 > (time_span+interv*2+120+1) & used1 < (get_last_item(used1)-interv) ]
+#used1 <- used1[used1 > 3000 & used1 < 3250]
 test1 = sample(used1, 1)
-random_sample_z <- get_every(used1, 11)
+random_sample_z <- get_every(used1, 21*6)
   #sample(used1, 15)
   #sample(used1, 20)
   #c(test1, test1+2,test1+2*2,test1+2*3,test1+2*4,test1+2*5)
@@ -277,8 +277,6 @@ for(z in seq_along(obj_static[[1]][['close']])){
         if(
           #s2$coefficients[,1][[2]] > s$coefficients[,1][[2]]
           #sd(get_return(serie,21*6)) > 0.25
-          slump < 50
-          &&
           framtidaTidsSerie$getIndex(i)$getSharpeRatio() > avg_sharpe
           && 
           sd(framtidaTidsSerie$getIndex(i)$getReturn()) < avg_sd
@@ -623,13 +621,14 @@ for(z in seq_along(obj_static[[1]][['close']])){
           #days_1_log_mean = mean(days_1_log)
           #ean_days = exp(days_1_log_mean)-1
           #sd_days = exp(sd(days_1_log))-1
-          how_long_until_it_reaches = median(framtidaTidsSerie$getIndex(i)$getAverageDaysEffect(mean_1))
+          how_long_until_it_reaches = mean(framtidaTidsSerie$getIndex(i)$getAverageDaysEffect(mean_1))
           #standard_derivation_reaches = sd(framtidaTidsSerie$getIndex(i)$getAverageDaysEffect(mean_1))
+      
           
           expected_rise = framtidaTidsSerie$getIndex(i)$getExpectedEffectAbove(mean_1)
           expected_rise = quantile(expected_rise, 0.25)[[1]]
           
-          expected_rise2 = framtidaTidsSerie$getIndex(i)$getExpectedEffect(mean_1, 5)
+          expected_rise2 = framtidaTidsSerie$getIndex(i)$getExpectedEffect(mean_1, 2)
           expected_rise2 = quantile(expected_rise2, 0.25)[[1]]
           #expected_rise = mean_1
           
@@ -1518,9 +1517,12 @@ for(z in seq_along(obj_static[[1]][['close']])){
                 a2 = obj_static[[ a_co[[i]] ]][['close']][(z+x-10):(z+x)]
                 #a1 = a1[c(TRUE, FALSE)]
                 
+                "if(r > 11){
+                  claim = mal
+                }
 
                 
-                "if(mean( (a1-buy)/buy)/claim > 5 && prevent == FALSE){
+                if(mean( (a1-buy)/buy)/claim > 2 && prevent == FALSE && r < 11){
                   if(length(expected_rise2) == 0){
                     claim = mean( (a1-buy)/buy)*3
                   }else{

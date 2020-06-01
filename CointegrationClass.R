@@ -426,8 +426,8 @@ TimeSerie <- R6Class("TimeSerie",
                            
                            expected = NULL
                            for(t in seq_along(avkastning)){
-                             if(avkastning[[t]]/above > change){
-                               expected = max(avkastning[t:length(avkastning)])
+                             if(avkastning[[t]]/above > change && t < 11){
+                               expected = max(avkastning[t:12])
                                break;
                              }
                            }
