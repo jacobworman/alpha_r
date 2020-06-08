@@ -426,8 +426,8 @@ TimeSerie <- R6Class("TimeSerie",
                            
                            expected = NULL
                            for(t in seq_along(avkastning)){
-                             if(avkastning[[t]]/above > change && t < 11){
-                               expected = max(avkastning[t:12])
+                             if(avkastning[[t]]/above > change){
+                               expected = max(avkastning[t:length(avkastning)])
                                break;
                              }
                            }
@@ -599,7 +599,7 @@ TimeSerie <- R6Class("TimeSerie",
                          return(rev(g)); 
                        },
                        
-                       get_beta = function(array_1, marketTimeSerie, days_1, avgift = NULL){ 
+                       get_beta = function(array_1, marketTimeSerie, days_1, lags = 1, avgift = NULL){ 
                          g <- c(); 
                          av <- 0; 
                          if(is.numeric(avgift) == TRUE ){ 
@@ -615,8 +615,8 @@ TimeSerie <- R6Class("TimeSerie",
                            array1 = array_1[(n-days_1):n]
                            array2 = marketTimeSerie[(n-days_1):n]
                            
-                           array1_return = get_return(array1, 1)
-                           array2_return = get_return(array2, 1)
+                           array1_return = get_return(array1, lags)
+                           array2_return = get_return(array2, lags)
                            
                            
                            linearmod1 = Regression$new(data.frame(
@@ -852,7 +852,7 @@ TimeSerie <- R6Class("TimeSerie",
                          return(private$is_below(private$timeSerie,days_1,below, value, serie));
                        },
                        ## BETAS
-                       getBeta = function(marketTimeSerie, tidTillbaka = NULL){
+                       getBeta = function(marketTimeSerie, lags = 1, tidTillbaka = NULL){
                          days_1 = 21;
                          if(!is.null(private$tidTillbaka)){
                            days_1 = private$tidTillbaka;
@@ -860,7 +860,7 @@ TimeSerie <- R6Class("TimeSerie",
                          if(!is.null(tidTillbaka)){
                            days_1 = tidTillbaka
                          }
-                         return(private$get_beta(private$timeSerie,marketTimeSerie,days_1));
+                         return(private$get_beta(private$timeSerie,marketTimeSerie,days_1, lags));
                        },
                        
                        getSlope = function(tidTillbaka = NULL){
@@ -1094,7 +1094,7 @@ TimeSeries <- R6Class("TimeSeries",
                          for(i in seq_along(private$timeSeries)){
                            avg_sd <- c(avg_sd, mean(private$timeSeries[[i]]$getSD() ) );
                          }
-                         return(median(avg_sd));
+                         return(avg_sd);
                        },
                        
                        getAverageSDSD = function(){
