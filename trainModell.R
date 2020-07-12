@@ -1,4 +1,6 @@
   ## aggregate(utveckling ~ format(report$datum, "%Y"), report, mean)
+
+seq(1:(length(report[['datum']])- length(utveckling))) + length(report[['datum']])- length(utveckling)
   
   library('lmtest')
   library('gvlma')
@@ -77,10 +79,10 @@
   track_1 <- c()
   used1 <- seq_along(obj_static[[1]][['date']])
   # 2090
-  used1 <- used1[used1 > (time_span+120*8+1) & used1 < (get_last_item(used1)-interv) ]
+  used1 <- used1[used1 > (time_span+126+1) & used1 < (get_last_item(used1)-interv) ]
   #used1 <- used1[used1 > 3000 & used1 < 3250]
   test1 = sample(used1, 1)
-  random_sample_z <- get_every(used1, 21*6)
+  random_sample_z <- get_every(used1, 18)
     #sample(used1, 15)
     #sample(used1, 20)
     #c(test1, test1+2,test1+2*2,test1+2*3,test1+2*4,test1+2*5)
@@ -92,6 +94,7 @@
   r3_total = 0;
   testUtveckling = c()
   time_obs = c()
+  time_obs2 = c()
   total = 0
   total_pos = 0
   alpha = 0.01
@@ -102,6 +105,7 @@
   
   utveckling_a = c()
   utveckling_b = c()
+  utveckling_c = c()
   
   graf_over_kop_salj = list()
   kop_salj = list()
@@ -200,6 +204,15 @@
       
       if(TRUE){
         
+        "serie2 = RSI(sp500IndexFramtida$get(), n = 21*3)
+        serie2 = serie2[!is.na(serie2)]
+        serie2 = na.locf(serie2, fromLast = TRUE)
+        serie2 = get_every(serie2, 21*3)
+        print(get_last_item(serie2))
+        if(get_last_item(serie2) > quantile(serie2, 0.25)){
+          next
+        }"
+        
         
         
         ## MONTHLY
@@ -254,14 +267,14 @@
           
         }"
         
-        "topp_beta2 = c()
+        topp_beta2 = c()
         for(i in seq_along(companies)){
 
         topp_beta2 = c(topp_beta2, obj_static[[ companies[[i]] ]][['close']][[z]])
         
         }
         
-        toppBeta2 = sort(topp_beta2, decreasing = TRUE)[[100]]"
+        toppBeta2 = sort(topp_beta2, decreasing = TRUE)[[150]]
         
       
         if(TRUE){
@@ -290,16 +303,150 @@
           }
           fordelning = rev(fordelning)
           
-          "get_last_item(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span):(z)],21))
-            + sd(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span):(z)],21))
-            < get_last_item(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span-21):(z-21)],21))
-            && "
+          
+          
+          avkastning_1 = obj_static[[ companies[[i]] ]][['close']][(z-(250*5)):z]
+          avkastning_2 = sp500[(z-(250*5)):z]
+          
+          returns1 = get_return(avkastning_1, 126)
+          returns2 = get_return(avkastning_2, 126)
+          
+          linearmod = Regression$new(data.frame(
+            y = returns1,
+            x= returns2
+          ), TRUE)
+          
+          s = linearmod$getSummary()
+          
+          
+          row1 <- list_of_companies_with_cointegrated_relationship[
+            which(list_of_companies_with_cointegrated_relationship$company1 == as.character(companies[[i]])), ];
+          row2 <- list_of_companies_with_cointegrated_relationship[
+            which(list_of_companies_with_cointegrated_relationship$company2 == as.character(companies[[i]])), ];
+          
+          co2_name = NULL
+          sec = 0
+          if(nrow(row1) > 0){
+            sec = 1
+            if(nrow(row1) > 1){
+              a = length(row1) - 1
+              co2_name = as.character(row1[2,2])
+            }else{
+              co2_name = row1$company2
+            }
+          }else if(nrow(row2) > 0){
+            if(nrow(row2) > 1){
+              co2_name = as.character(row2[2,1])
+            }else{
+              co2_name = row2$company1
+            }
+            sec = 2
+          }else{
+            next
+          }
+          
+          
+          
+          co = obj_static[[ companies[[i]] ]][['close']][(z-(250*2)):z]
+          co2 = obj_static[[ co2_name ]][['close']][(z-(250*2)):z]
+          
+          if(sec == 1){
+          linearmod <- lm(y ~., data.frame(
+            y =  (co),
+            x= (co2)
+          ))
+          }else{
+            linearmod <- lm(y ~., data.frame(
+              y =  (co2),
+              x= (co)
+            ))
+          }
+          
+          spread <- linearmod$residuals
+          #print("Spread")
+          "print(get_last_item(spread))
+          print(sd(spread)*2*-1)"
+          if(get_last_item(spread) < sd(spread)*2*-1 && sec == 1
+             || get_last_item(spread) > sd(spread)*2 && sec == 2){
+            print("YEs")
+            
+          }else{
+            next
+          }
+          
+          
+          n = length(obj_static[[ companies[[i]] ]][['close']][(z-(time_span)):z])
+          aList = list(y = c(), x=c())
+          for(t in seq_along(obj_static[[ companies[[i]] ]][['close']][(z-(time_span)):z])){
+            
+            if((z-(250*2)-t) <= 0){
+              break
+            }
+            
+            if(t %% 18 != 0){
+              next
+            }
+            
+            co = obj_static[[ companies[[i]] ]][['close']][(z-(250*2)-t):(z-t)]
+            co2 = obj_static[[ co2_name ]][['close']][(z-(250*2)-t):(z-t)]
+            
+            if(sec == 1){
+              linearmod <- lm(y ~., data.frame(
+                y =  (co),
+                x= (co2)
+              ))
+            }else{
+              linearmod <- lm(y ~., data.frame(
+                y =  (co2),
+                x= (co)
+              ))
+            }
+            
+            spread <- linearmod$residuals
+            
+            if(get_last_item(spread) < sd(spread)*2*-1 && sec == 1
+               || get_last_item(spread) > sd(spread)*2 && sec == 2){
+              
+              aList[['x']] = c(aList[['x']], 1)
+              
+            }else{
+              aList[['x']] = c(aList[['x']], 0)
+            }
+            
+            avkastning = obj_static[[ companies[[i]] ]][['close']][(z-t+1):(z-t+1+interv)]/obj_static[[ companies[[i]] ]][['close']][[(z-t)]]
+            
+            if(any(avkastning > 1.02)){
+              aList[['y']] = c(aList[['y']], 1)
+            }else{
+              aList[['y']] = c(aList[['y']], 0)
+            }
+          }
+          
+          df = as.data.frame(aList)
+          
+          linearmod = Regression$new(df,FALSE)
+          s= linearmod$getSummary()
+          
+          
+          if(length(s$coefficients[,1]) == 0){
+            next
+          }
+          print(s)
+          print(s$coefficients[,1][[1]])
+          if(s$coefficients[,1][[1]] < 0.95 || length(df[['x']][ df[['x']] > 0 ]) > 10){
+            next
+          }
+          
           if(
             #s2$coefficients[,1][[2]] > s$coefficients[,1][[2]]
             #sd(get_return(serie,21*6)) > 0.25
-            TRUE
-            #obj_static[[ companies[[i]] ]][['close']][[z]] > toppBeta2
-            #&& sd(framtidaTidsSerie$getIndex(i)$getReturn()) <  quantile(avg_sd,0.25)
+            
+            #s$coefficients[,1][[2]] < 1.1
+            #&& s$coefficients[,1][[2]] > 0.7
+            framtidaTidsSerie$getIndex(i)$getSharpeRatio() > (avg_sharpe)
+            #&&
+            
+            #sd(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span):z], 21*6)) > 0.3
             #&& mean(framtidaTidsSerie$getIndex(i)$getReturn()) > 0.005
             #&& 
             #get_last_item(fordelning) < mean(fordelning) - sd(fordelning)
@@ -308,6 +455,53 @@
           }else{
             next
           }
+          
+          np = i
+          i = which(companies == co2_name)
+          
+          print(companies[[i]])
+          
+          if(FALSE){
+          
+          "if(
+            get_last_item(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span):z], 21))
+            < 
+            get_last_item(get_return(obj_static[[ companies[[i]] ]][['close']][((z-21)-time_span):(z-21)], 21))
+          ){
+            
+          }else{
+            next
+          }"
+          
+          
+          "serie = framtidaTidsSerie$getIndex(i)$getBeta(sp500IndexFramtida$get(), 1, 21*6)
+          median_1 = mean(serie)
+          if(get_last_item(serie) > 1.1 ){
+            
+          }else{
+            next
+          }"
+          
+          "linearmod = Regression$new(data.frame(
+            y = framtidaTidsSerie$getIndex(i)$getEffect(0.08)
+          ), TRUE);
+          s = linearmod$getSummary()
+          
+          print(s$coefficients[,1][[1]])
+          
+          if(s$coefficients[,1][[1]] < 0.60){
+            next
+          }"
+          
+          "rsi_n = ceiling(21*6)
+          rsi3 = RSI(framtidaTidsSerie$getIndex(i)$get() , n = rsi_n)
+          rsi3 = rsi3[!is.na(rsi3)]
+          rsi3 = get_every(rsi3, 21*6)
+          if(get_last_item(rsi3) >  quantile(rsi3, 0.80)){
+            
+          }else{
+            next
+          }"
           
           
           
@@ -419,8 +613,8 @@
             RSI = rsi1,
             RSI_500 = rsi_500_r,
             #market_volume = removeInf(sp500_volume_timeserie$getReturnEveryDay()),
-            #x8 = market$getReturnEveryDay()
-            beta = tidsSerie$getIndex(i)$getBeta(sp500Index$get()),
+            #x8 = market$getReturnEveryDay(),
+            beta = tidsSerie$getIndex(i)$getBeta(sp500Index$get(), intv, interv),
             x9 = cointegrationTermAssetMarket[[1]]
           );
           
@@ -439,8 +633,8 @@
                bransch_namn[[t]] == 'MaterialPrisIndex'){
               #sd_1 = mean(bransch_serier$getIndex(t)$get()) + sd(bransch_serier$getIndex(t)$get())
               #sd_2 = mean(bransch_serier_framtida$getIndex(t)$get()) + sd(bransch_serier_framtida$getIndex(t)$get())
-              #lista_med_avkastningar[[ paste0(bransch_namn[[t]], '1')  ]] = get_every(log(bransch_serier$getIndex(t)$get()),interv)
-              #lista_med_avkastningar_framtida[[ paste0(bransch_namn[[t]], '1')  ]] = get_last_item(get_every(log(bransch_serier_framtida$getIndex(t)$get()), interv))
+              lista_med_avkastningar[[ paste0(bransch_namn[[t]], '1')  ]] = get_every(log(bransch_serier$getIndex(t)$get()),interv)
+              lista_med_avkastningar_framtida[[ paste0(bransch_namn[[t]], '1')  ]] = get_last_item(get_every(log(bransch_serier_framtida$getIndex(t)$get()), interv))
               next;
             }else if(bransch_namn[[t]] == 'FinancialStessIndex'){
               next
@@ -474,8 +668,8 @@
             #lista_med_avkastningar[[ paste0(bransch_namn[[t]], '1')  ]] = bransch_serier$getIndex(t)$getReturn()
             #lista_med_avkastningar_framtida[[ paste0(bransch_namn[[t]], '1')  ]] = get_last_item( bransch_serier_framtida$getIndex(t)$getReturn() )
             
-            lista_med_avkastningar[[ paste0(bransch_namn[[t]], '12')  ]] = tidsSerie$getIndex(i)$getBeta(bransch_serier$getIndex(t)$get())
-            lista_med_avkastningar_framtida[[ paste0(bransch_namn[[t]], '12')  ]] = get_last_item( framtidaTidsSerie$getIndex(i)$getBeta(bransch_serier_framtida$getIndex(t)$get()) )
+            lista_med_avkastningar[[ paste0(bransch_namn[[t]], '12')  ]] = tidsSerie$getIndex(i)$getBeta(bransch_serier$getIndex(t)$get(), intv, interv)
+            lista_med_avkastningar_framtida[[ paste0(bransch_namn[[t]], '12')  ]] = get_last_item( framtidaTidsSerie$getIndex(i)$getBeta(bransch_serier_framtida$getIndex(t)$get(), intv, interv) )
             
             
             
@@ -567,7 +761,7 @@
             asset_energy = get_last_item(cointegrationTermAssetEnergy[[2]]),
             asset_oil = get_last_item(get_every(cointegrationTermAssetOil[[2]], interv) ),
             ##
-           beta = get_last_item(framtidaTidsSerie$getIndex(i)$getBeta(sp500IndexFramtida$get())),
+           beta = get_last_item(framtidaTidsSerie$getIndex(i)$getBeta(sp500IndexFramtida$get(), intv, interv)),
             RSI = get_last_item(RSI(framtidaTidsSerie$getIndex(i)$get(), n = rsi_n)),
             RSI_500 = get_last_item(RSI(sp500IndexFramtida$get(), n = rsi_n))
           )
@@ -587,7 +781,7 @@
           #length(cointegrationTermAssetEnergy[[1]]) != length(framtidaTidsSerie$getIndex(i)$getReturnEveryDay())  
           copy_explanatory_variables2 = explanatory_variables
           if( TRUE    ){
-            returns = get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span/8):z],interv)
+            returns = get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span/3):z],interv)
             
             mean_1 = abs(mean(returns))
             
@@ -599,8 +793,10 @@
             if(TRUE){
               print("Mål:")
               print(mal)
-              mean_1 = 0.08
+              mean_1 = 0.02
             }
+            
+            
             
             
             
@@ -648,14 +844,24 @@
            a = explanatory_variables[ , !(names(explanatory_variables) %in% c( 'y' ))]
             returns2 = get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span/8):z],1)
             explanatory_variables12 = cbind(a,data.frame(
-              y = framtidaTidsSerie$getIndex(i)$getBeta(sp500IndexFramtida$get())
+              y = framtidaTidsSerie$getIndex(i)$getBeta(sp500IndexFramtida$get(), intv, interv)
             )
             )
             
             a = explanatory_variables[ , !(names(explanatory_variables) %in% c( 'y' ))]
             explanatory_variables13 = cbind(a,
                                             data.frame(
-                                              y = framtidaTidsSerie$getIndex(i)$getEffectBelow(-0.1)
+                                              y = framtidaTidsSerie$getIndex(i)$getReturn()
+                                            ))
+            
+            a = explanatory_variables[ , !(names(explanatory_variables) %in% c( 'y' ))]
+            rsi_500 = RSI(framtidaTidsSerie$getIndex(i)$get(), n = rsi_n)
+            rsix = rsi_500[!is.na(rsi_500)]
+            rsi_500 = na.locf(rsi_500, fromLast = TRUE)
+            rsi_500_r = get_every(rsi_500, interv)
+            explanatory_variables14 = cbind(a,
+                                            data.frame(
+                                              y = rsi_500_r
                                             ))
             
             "explanatory_variables12 = data.frame(
@@ -855,6 +1061,8 @@
               best_r_squared = row.names(s$coefficients)
             }
             
+            ##REMOVE
+            #best_r_squared[[2]] = best_r_squared[[1]]
             
             explanatory_variables2 = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( best_r_squared[[2]] ))]
             
@@ -1069,50 +1277,7 @@
             
             ##
             
-            found = FALSE
             
-            for(p in seq_along(s$coefficients[,4])){
-              if(s$coefficients[,4][[p]] > 0.05){
-                found = TRUE
-                break;
-              }
-            }
-            
-            if(found){
-              next
-            }
-            
-            
-            for(t in seq_along(names1)){
-              if(t == 1){
-                next
-              }
-              
-              explanatory_variables[[ paste0(names1[[t]], '2') ]] = explanatory_variables[[names1[[t]]]]^2
-              linearmod1 = Regression$new(explanatory_variables, TRUE)
-              s2 = linearmod1$getSummary()
-              found = FALSE
-              
-              for(p in seq_along(s2$coefficients[,4])){
-                if(s2$coefficients[,4][[p]] > 0.05){
-                  found = TRUE
-                  break;
-                }
-              }
-              
-              if(s2$adj.r.squared > s$adj.r.squared && found == FALSE ){
-                linearmod = linearmod1
-                s = s2
-                aList[[ paste0(names1[[t]], '2') ]] = get_last_item(data2_pred[[names1[[t]]]]^2)
-                data2_pred = cbind(data2_pred, 
-                                   as.data.frame(
-                                     aList
-                                   )
-                                   )
-              }else{
-                explanatory_variables =  explanatory_variables[ , !(names(explanatory_variables) %in% c( paste0(names1[[t]], '2') ))]
-              }
-            }
             
             "explanatory_variables[[ paste0(names1[[1]], '2') ]] = explanatory_variables[[names1[[1]]]]^2
             
@@ -1466,9 +1631,9 @@
             
             
             
-          if( res[1,1] >= 0.95) {
+          if(  res[1,1] >= 0.95 && s$r.squared > 0.2 && all(s$coefficients[,4] < 0.05)) {
             
-            
+           print(s)
             ## probability that is will rise
             
             
@@ -1533,65 +1698,136 @@
           
           "if(pass == FALSE){
             next
-          }"
-          
-          "rsi_n = ceiling(126)
-          rsi2 = RSI(framtidaTidsSerie$getIndex(i)$get() , n = rsi_n)
-          rsi2 = rsi2[!is.na(rsi2)]
-          
-          
-          if(get_last_item(rsi2) <  quantile(rsi2, 0.05)[[1]]){
-            
-          }else{
-            next
           }
+          "
+         
           
-          linearmod = Regression$new(data.frame(
+          "linearmod = Regression$new(data.frame(
             y = explanatory_variables[['y']]
           ), TRUE);
           s = linearmod$getSummary()
           
           print(s$coefficients[,1][[1]])
           
-          if(s$coefficients[,1][[1]] < 0.8){
+          if(s$coefficients[,1][[1]] < 0.88){
             next
           }"
           
-          indikator = 0;
-          times = 0;
-          count = 0;
-          pass = FALSE
+          
+          
+          
+          "if(pass == FALSE){
+            next
+          }"
+          
+         
+          
+          
+          static_explanatory_variables = explanatory_variables12
+          if(FALSE){
+            indikator = 0;
+            times = 0;
+            count = 0;
+            pass = FALSE
+            variable_name = NULL
+            the_regression = NULL
           for(l in seq(1:5)){
-            if(!is.data.frame(explanatory_variables12) || length(explanatory_variables12) == 1){
+             
+            if(!is.data.frame(static_explanatory_variables) || length(static_explanatory_variables) == 1){
               next
             }
-            
-          linearmod = Regression$new(explanatory_variables12, TRUE)$chooseBestRSquared(TRUE);
-          s = linearmod$getSummary();
           
-          "objekt = removeHighPValues(linearmod, explanatory_variables12, c(0.4, 0.3,0.2, 0.1, 0.05, 0.05, 0.05, 0.01, 0.01), TRUE)
-          if(is.null(objekt)){
-            break;
-          }
-          linearmod = objekt[[1]]
-          if(is.null(linearmod)){
-            break
-          }
-          explanatory_variables = objekt[[2]]"
+          
+          ##
+          linearmod = Regression$new(static_explanatory_variables, TRUE)$chooseBestRSquared(TRUE)
+          s = linearmod$getSummary();
           
           names1 = names(s$coefficients[,1])
           
           if(is.null(names1)){
             names1 = row.names(s$coefficients)
           }
-          bol = FALSE
-          aList = list();
-          aList[[names1[[2]] ]] = explanatory_variables12[[ names1[[2]] ]]
-          aList[['y']] = explanatory_variables12[['y']]
+          
+          "aList = list()
+          variable_1 = c(names1[[2]], variable_name, 'y')
+          for(t in seq_along(variable_1)){
+            aList[[variable_1[[t]]]] = static_explanatory_variables[[ variable_1[[t]] ]]
+          }
+          explanatory_variables12 = as.data.frame(aList)
           linearmod = Regression$new(as.data.frame(aList), TRUE)
           s = linearmod$getSummary();
           
+          names1 = names(s$coefficients[,1])
           
+          if(is.null(names1)){
+            names1 = row.names(s$coefficients)
+          }"
+          
+          ##
+          explanatory_variables12 = static_explanatory_variables
+          ##
+          "objekt = removeHighPValues(linearmod, explanatory_variables12, c(0.4, 0.3,0.2, 0.1, 0.05, 0.05, 0.05), TRUE)
+          if(is.null(objekt)){
+            break
+          }
+          linearmod = objekt[[1]]
+          if(is.null(linearmod)){
+            break
+          }
+          explanatory_variables12 = objekt[[2]]
+          
+          s = linearmod$getSummary();
+          
+          names1 = names(s$coefficients[,1])
+          
+          if(is.null(names1)){
+            names1 = row.names(s$coefficients)
+          }"
+          ##
+          ##
+          
+          #y = explanatory_variables12[['y']]
+          #explanatory_variables12 = removeHC(explanatory_variables12, y, 0.4)
+          
+          "if(is.null(explanatory_variables12) || !is.data.frame(explanatory_variables12)){
+            aList = list()
+            variable_1 = c(variable_name, 'y')
+            for(t in seq_along(variable_1)){
+              aList[[variable_1[[t]]]] = static_explanatory_variables[[ variable_1[[t]] ]]
+            }
+            explanatory_variables12 = as.data.frame(aList)
+          }
+          
+          if(is.null(explanatory_variables12[['y']])){
+            explanatory_variables12[['y']] = y
+          }"
+          "if(is.null(explanatory_variables12[['y']])){
+            explanatory_variables12[['y']] = y
+          }
+          linearmod = Regression$new(explanatory_variables12, TRUE)
+          s = linearmod$getSummary();"
+          ##
+          
+          "linearmod1 = Regression$new(explanatory_variables12, TRUE)$chooseBestRSquared(TRUE);
+          s1 = linearmod1$getSummary();
+          
+          names1 = names(s1$coefficients[,1])
+          
+          if(is.null(names1)){
+            names1 = row.names(s1$coefficients)
+          }"
+          #explanatory_variables12 = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( names1[[2]] ))]
+          variable_name = names1[[2]]
+          
+          ##
+          "bol = FALSE
+          aList = list();
+          aList[[names1[[2]] ]] = explanatory_variables12[[ names1[[2]] ]]
+          aList[['y']] = explanatory_variables12[['y']]
+          linearmod = Regression$new(as.data.frame(aList), TRUE)"
+          
+          
+          #names1[[2]] = names1[[1]] 
           
             found = FALSE
             for(t in seq_along(s$coefficients[,4])){
@@ -1601,12 +1837,17 @@
               }
             }
             if(found){
-              explanatory_variables12 = explanatory_variables12[ , !(names(explanatory_variables12) %in% c( names1[[2]] ))]
+              
+              static_explanatory_variables = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( variable_name ))]
               next;
             }else{
             }
           
-          times = times + 1
+          if(s$r.squared < 0.3){
+            break;
+          }
+          
+          
           
           b = FALSE
           tryCatch({
@@ -1623,18 +1864,27 @@
             next;
           }
           
-          if(res[1,1] > 0){
+          if(s$r.squared > 0.2){
+          times = times + 1
+          
+          if(res[1,1] > 1){
             count = count + 1
           }
+          }
           
+          print("Beta forecast")
           print(res[1,1])
-          if( res[1,1] > 1.15 && s$r.squared > 0.3){
+          if( 
+            res[1,1] > 0.3
+            &&
+            res[1,1] < 0.8 && s$r.squared >= 0.3){
             indikator = indikator + 1
-            
-            explanatory_variables12 = explanatory_variables12[ , !(names(explanatory_variables12) %in% c( names1[[2]] ))]
-            break
+            variable_name = names1[[2]]
+            the_regression = linearmod
+            static_explanatory_variables = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( variable_name ))]
+            break;
           }else{
-            explanatory_variables12 = explanatory_variables12[ , !(names(explanatory_variables12) %in% c( names1[[2]] ))]
+            static_explanatory_variables = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( variable_name ))]
             next;
           }
           
@@ -1643,15 +1893,195 @@
           if(indikator >= 1){
             pass = TRUE
           }
+            
+          }
+          
+          "if(pass == FALSE){
+            next
+          }"
+          
+          ## ARIMA
+          print("ARIMA")
+          
+          if(TRUE){
+            indikator = 0;
+            times = 0;
+            count = 0;
+            pass = FALSE
+            variable_name = NULL
+            the_regression = NULL
+            explanatory_variables13 = explanatory_variables
+            static_explanatory_variables = explanatory_variables13
+            for(l in seq(1:5)){
+              
+              if(!is.data.frame(static_explanatory_variables) || length(static_explanatory_variables) == 1){
+                next
+              }
+              
+              linearmod = Regression$new(static_explanatory_variables, TRUE)$chooseBestRSquared(TRUE);
+              s = linearmod$getSummary();
+              
+              names1 = names(s$coefficients[,1])
+              
+              if(is.null(names1)){
+                names1 = row.names(s$coefficients)
+              }
+              variable_name = names1[[2]]
+              
+              aList = list(
+              
+              )
+              
+              "aList[[ variable_name ]]  = static_explanatory_variables[[ variable_name ]]
+              aList[[ paste0(variable_name, '2') ]]  = static_explanatory_variables[[ variable_name ]]^2 
+              
+              aList2 = list()
+              aList2[[ paste0(variable_name, '2') ]] = data2_pred[[ variable_name ]]^2
+              data2_pred = cbind(data2_pred,
+                                 as.data.frame(aList2)
+                                 )
+              
+              linearmod = Regression$new(cbind(
+                data.frame(
+                  y = static_explanatory_variables[['y']]
+                ),
+                as.data.frame(aList)
+              ), TRUE);
+              s2 = linearmod$getSummary();
+              
+              if(s2$adj.r.squared > s$adj.r.squared){
+                s = s2
+              }"
+              
+              ##
+              
+              "names1 = names(explanatory_variables13)
+              for(t in seq_along(names1)){
+                if(names1[[t]] == variable_name || names1[[t]] == 'y'){
+                  next
+                }
+                
+                aList = list()
+                aList[[names1[[t]]]] = explanatory_variables13[[ names1[[t]] ]]
+                
+                names2 = names(s$coefficients[,1])
+                for(p in seq_along(names2)){
+                  if(names2[[p]] == '(Intercept)'){
+                    next
+                  }
+                  
+                  aList[[ names2[[p]] ]] = explanatory_variables13[[ names2[[p]] ]]
+                  
+                }
+                
+                d = cbind(data.frame(
+                  y = explanatory_variables13[['y']]
+                ), as.data.frame(aList))
+                
+                linearmod = Regression$new(d, TRUE)
+                
+                s2 = linearmod$getSummary();
+                
+                
+                if(s2$adj.r.squared > s$adj.r.squared
+                   && s2$coefficients[,4][[ length(aList)+1 ]] < 0.05){
+                  s = s2
+                }
+                
+              }"
+
+              
+              
+              #names1[[2]] = names1[[1]] 
+              
+              found = FALSE
+              for(t in seq_along(s$coefficients[,4])){
+                if(s$coefficients[,4][[t]] > 0.05){
+                  found = TRUE
+                  break;
+                }
+              }
+              if(found){
+                
+                static_explanatory_variables = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( variable_name ))]
+                next;
+              }else{
+              }
+              
+              
+              
+              b = FALSE
+              tryCatch({
+                res = linearmod$predict(data2_pred, 1, 'confidence');
+              }, 
+              error = function(e){
+                b = TRUE
+              })
+              if(b){
+                next;
+              }
+              
+              if(is.na(res[1,1]) ){
+                next;
+              }
+              
+              if(s$r.squared > 0.2){
+                times = times + 1
+                
+                if(res[1,1] > 0){
+                  count = count + 1
+                }
+              }
+              
+              print(res[1,1])
+              if( res[1,1] > 0.95 && s$r.squared > 0.2){
+                indikator = indikator + 1
+                variable_name = names1[[2]]
+                the_regression = linearmod
+                static_explanatory_variables = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( variable_name ))]
+                break;
+              }else{
+                static_explanatory_variables = static_explanatory_variables[ , !(names(static_explanatory_variables) %in% c( variable_name ))]
+                next;
+              }
+              
+            }
+            
+            if(indikator >= 1){
+              pass = TRUE
+            }
+            
+          }
+          
+          if(pass == FALSE){
+            next
+          }
+          
           "print(indikator)
           if(indikator < 1){
             next
           }
           "
           
+          "linearmod1 = Regression$new(data.frame(
+            y = framtidaTidsSerie$getIndex(i)$getEffect(0.08)
+          ), TRUE)
+          s1 = linearmod1$getSummary()
+          
+          
+          if(
+            s1$coefficients[,1][[1]] < 0.6
+          ){
+            next
+          }"
+          
           if(pass == FALSE){
             next
           }
+          
+          }
+          
+          i = np
           
           
           if(
@@ -1671,7 +2101,7 @@
                 new_companies <- c(new_companies, a_co[[i]])
                 new_sigma = c(new_sigma, s$sigma)
                 constant_true = c(constant_true, intercept1)
-                best_forecast = c(best_forecast,  mean(linearmod$getPValue())  )
+                #best_forecast = c(best_forecast,  mean(linearmod$getPValue())  )
                 #sell_at = c(sell_at, mean_1)
                 }
                 
@@ -1693,51 +2123,12 @@
                   x = r
                   a1 = obj_static[[ a_co[[i]] ]][['close']][[(z+x)]]
                   a2 = obj_static[[ a_co[[i]] ]][['close']][(z+x-10):(z+x)]
-                  #a1 = a1[c(TRUE, FALSE)]
                   
-                  
-  
-                  
-                  "if(mean( (a1-buy)/buy)/claim > 2 && prevent == FALSE && r < 11){
-                    if(length(expected_rise2) == 0){
-                      claim = mean( (a1-buy)/buy)*3
-                    }else{
-                      claim = expected_rise2
-                    }
-                    #claim = mean( (a1-buy)/buy)*3
-                    prevent = TRUE
-                  }"
-                  
-                  "if(mean( (a1-buy)/buy) >= claim && prevent2 == FALSE && prevent == FALSE){
-   
-                    if(length(expected_rise) == 0){
-                      claim = mean( (a1-buy)/buy)*1.5
-                    }else{
-                      claim = expected_rise
-                    }
-                    #claim = mean( (a1-buy)/buy)*3
-                    prevent2 = TRUE
-                  }"
-                  
-                  "if(mean( (a1-buy)/buy)/claim > 1.5 && prevent2 == FALSE){
-  
-                    claim = mean( (a1-buy)/buy)*4
-                    prevent2 = TRUE
-                  }"
-  
-                  
-                  "if(mean( (obj_static[[ a_co[[i]] ]][['open']][[(z+x)]]-buy)/buy) < 0 && prevent3 == TRUE){
-                    if(stop){
-                      utveckling <- c(utveckling,  mean(obj_static[[ a_co[[i]] ]][['open']][[(z+x)]]/buy) )
-                    }else{
-                      utveckling = c(utveckling, ((mean(obj_static[[ a_co[[i]] ]][['open']][[(z+x)]]/buy)-1)*0.8+1) )
-                    }
-                    sell_at = c(sell_at,  mean(obj_static[[ a_co[[i]] ]][['open']][[(z+x)]]/buy))
-                    time_obs = c(time_obs, x)
-                    break;
-                  }
-                  "
-                  "if(r > 60){
+     
+                  if( mean( (a1-buy)/buy)  > 0.02 && prevent3 == TRUE){
+                    #buy = c(buy, obj_static[[ a_co[[i]] ]][['close']][[(z+r)]])
+                    #prevent3 = FALSE
+                    
                     if(stop){
                       utveckling <- c(utveckling,  mean(a1/buy) )
                     }else{
@@ -1746,12 +2137,6 @@
                     sell_at = c(sell_at,  mean(a[[x]]/buy))
                     time_obs = c(time_obs, x)
                     break;
-                  }"
-  
-     
-                  if( mean( (a1-buy)/buy)  < -0.08 && prevent3 == TRUE){
-                    buy = c(obj_static[[ a_co[[i]] ]][['close']][[(z+r)]])
-                    prevent3 = FALSE
                   }
   
   
@@ -1764,6 +2149,56 @@
                     utveckling <- c(utveckling, mean(a1/buy) )
                     }else{
                       utveckling <- c(utveckling, ((mean(a1/buy)-1)*0.8+1) )
+                    }
+                    break;
+                  }
+                  
+                  y = y + 1
+                }
+                
+                b = obj_static[[ a_co[[i]] ]][['close']][[(z)]]
+                buy = c(b )
+                print(obj_static[[ a_co[[i]] ]][['close']][[(z)]])
+                a = obj_static[[ a_co[[i]] ]][['close']][(z+1):(z+interv)]
+                stop = TRUE
+                claim = mean_1
+                prevent = FALSE
+                prevent2 = FALSE
+                prevent3 = TRUE
+                brought = 1
+                x = 1
+                y = 1
+                for(r in seq(1:126)){
+                  x = r
+                  a1 = obj_static[[ a_co[[i]] ]][['close']][[(z+x)]]
+                  a2 = obj_static[[ a_co[[i]] ]][['close']][(z+x-10):(z+x)]
+
+                  
+                  
+                  if( mean( (a1-buy)/buy)  > 0.08 && prevent3 == TRUE){
+                    #buy = c(buy, obj_static[[ a_co[[i]] ]][['close']][[(z+r)]])
+                    #prevent3 = FALSE
+                    
+                    if(stop){
+                      utveckling_c <- c(utveckling_c,  mean(a1/buy) )
+                    }else{
+                      utveckling_c = c(utveckling_c, ((mean(a1/buy)-1)*0.8+1) )
+                    }
+                    sell_at = c(sell_at,  mean(a[[x]]/buy))
+                    time_obs2 = c(time_obs2, x)
+                    break;
+                  }
+                  
+                  
+                  
+                  if(y >= length(a) || r == 126){
+                    print(mean(a1/buy))
+                    time_obs2 = c(time_obs2, x)
+                    #sell_at = c(sell_at,  mean(a[[x]]/buy))
+                    if(stop){
+                      utveckling_c <- c(utveckling_c, mean(a1/buy) )
+                    }else{
+                      utveckling_c <- c(utveckling_c, ((mean(a1/buy)-1)*0.8+1) )
                     }
                     break;
                   }
@@ -1811,16 +2246,16 @@
                 print(s)
                 print(res)
                 #a <- obj_static[[ a_co[[i]] ]][['close']][(z):(z+interv)]
-                a = obj_static[[ a_co[[i]] ]][['close']][(z+interv-5):(z+interv)]
+                a = obj_static[[ a_co[[i]] ]][['close']][(z+interv):(z+interv)]
                 graf_over_kop_salj[[  ]]
-                b = obj_static[[ a_co[[i]] ]][['close']][(z-5):(z)]
-                last = mean(a[c(TRUE, FALSE)]/b[c(TRUE, FALSE)] )
+                b = obj_static[[ a_co[[i]] ]][['close']][(z):(z)]
+                last = a/b
                 #utveckling <- c(utveckling, 
                 #                mean(a[c(TRUE, FALSE)]/b[c(TRUE, FALSE)] ) )
                 utveckling_a = c(utveckling_a, get_last_item(utveckling))
                 utveckling_b = c(utveckling_b, last)
                 
-                if(length(graf_over_kop_salj) == 0){
+                "if(length(graf_over_kop_salj) == 0){
                   graf_over_kop_salj[[1]] = obj_static[[ a_co[[i]] ]][['close']][(z-30):(z+ get_last_item(time_obs) )]
                   kop_salj[[1]] = c(rep(c(0), times = 30), obj_static[[ a_co[[i]] ]][['close']][(z):(z+get_last_item(time_obs))])
                   reg1[[1]] = data.frame(
@@ -1834,7 +2269,7 @@
                     y = static_explanatory_variables[['y']],
                     x = static_explanatory_variables[['beta']]
                   )
-                }
+                }"
                 
                 if(new_found){
                   per_intervall_utveckling[[ length(per_intervall_utveckling)+1 ]] = c(
@@ -1851,11 +2286,23 @@
                 }else{
                   utveckling[[length(utveckling)]] = last
                 }"
-                if(TRUE){
-                utveckling[[length(utveckling)]] = last
+                "if(prevent3 == FALSE){
+                  avkastning = obj_static[[ a_co[[i]] ]][['close']][[(z+interv)]]/buy[[1]]*0.7 + 
+                    obj_static[[ a_co[[i]] ]][['close']][[(z+interv)]]/buy[[2]]*0.3
+                  
+                utveckling[[length(utveckling)]] = avkastning
                 
                 print(get_last_item(utveckling))
-                }
+                }else{
+                  avkastning = (obj_static[[ a_co[[i]] ]][['close']][[(z+interv)]]/buy[[1]] - 1)*0.7 + 1
+                  utveckling[[length(utveckling)]] = avkastning
+                  print(get_last_item(utveckling))
+                }"
+                utveckling[[length(utveckling)]] = get_last_item(utveckling)
+                print("utveckling")
+                print(get_last_item(utveckling))
+                print("utveckling")
+                print(last)
                 d = data.frame(
                   datum = obj_static[[ companies[[i]] ]][['date']][[z]],
                   utveckling = get_last_item(utveckling),
@@ -1895,7 +2342,7 @@
         
         
         #new_companies = co_sharpe
-        if(FALSE){
+        if(length(new_companies) > 0){
           "limit = 15
           
           if(length(new_companies) >= 15){
@@ -1926,7 +2373,9 @@
               sell = obj_static[[ new_companies[[i]] ]][['close']][[z+interv*2]]
             }"
             
-            buys = c(buy)
+            ut = c(ut, sell/buy*dd_w[[ gsub(paste0('-'),'.' ,new_companies[[i]]) ]] )
+            
+            "buys = c(buy)
             for(t in seq_along(series)){
               if(t == 1){
                 break;
@@ -1943,7 +2392,7 @@
               ut = c(ut, sell/mean(buys)*dd_w[[ gsub(paste0('-'),'.' ,new_companies[[i]]) ]]  )
             }else{
               ut = c(ut, sell_at[[i]]*dd_w[[ gsub(paste0('-'),'.' ,new_companies[[i]]) ]] )
-            }
+            }"
           }
           
           ut = sum(ut)
@@ -2164,16 +2613,15 @@
   ett_kop = c()
   m = 500
   m2 = 500
+  money = 1000
   for(k in seq(1:1)){
-  period = sample(seq(1:length(per_intervall_utveckling)), 6)
-  for(t in seq(1:6)){
-    m = m*sample(per_intervall_utveckling[[ period[[t]] ]],1)
-    m2 = m2*sample(per_intervall_utveckling[[period[[t]]]],1)
+  period = sample(seq(1:length(per_intervall_utveckling)), 4)
+  for(t in seq(1:length(period))){
+    money = money*sample(per_intervall_utveckling[[period[[t]]]],1)
+    print(money)
   }
   }
-  print(m)
-  print(m2)
-  print(m+m2)
+  print(sum(money))
   for(t in seq_along(per_intervall_utveckling)){
     genomsnitt_per_gang = c(genomsnitt_per_gang, mean(per_intervall_utveckling[[t]]))
     chansen_for_under_ett = c(chansen_for_under_ett, length(per_intervall_utveckling[[t]][ per_intervall_utveckling[[t]] < 1 ])/length(per_intervall_utveckling[[t]]))
@@ -2188,3 +2636,15 @@
   nr = 8
   plot(reg1[[nr]][['x']], reg1[[nr]][['y']])
   
+  length(utveckling[utveckling < 1])/length(utveckling)
+  
+  
+  plot(explanatory_variables13[['x9']], explanatory_variables13[['y']])
+  
+  linearmod = Regression$new(data.frame(y= a[['y']], 
+                                        olja12=a[['Olja12']]), TRUE)
+s = linearmod$getSummary()  
+s
+
+a = sample(utveckling, 55)
+length(a[a < 1])/length(a)

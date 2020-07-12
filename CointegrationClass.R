@@ -924,7 +924,7 @@ TimeSerie <- R6Class("TimeSerie",
                          tryCatch({
                            
                            
-                           "private$timeSerie = SMA(private$timeSerie, n=5)
+                           "private$timeSerie = SMA(private$timeSerie, n=10)
                            private$timeSerie = na.locf(private$timeSerie, fromLast = FALSE)
                            private$timeSerie = na.approx(private$timeSerie)"
                            
@@ -1166,6 +1166,37 @@ Regression <- R6Class("Regression",
                        
                        uppdateraData = function(data){
                          private$data = data;
+                       },
+                       
+                       chooseBestMutipleRSquared = function(medKonstant){
+                         names1 = names(private$data)
+                         
+                         highestRightNow = 0;
+                         regen = NULL
+                         for(t in seq_along(private$data)){
+                           if(names1[[t]] == 'y'){
+                             next
+                           }
+                           data = data.frame(
+                             y = private$data[['y']]
+                           )
+                           data[[ names1[[t]] ]] = private$data[[ names1[[t]] ]]
+                           reg = Regression$new(data, medKonstant)
+                           if(is.na(reg$getSummary()$adj.r.squared) || is.na(reg$getSummary()$r.squared) 
+                              || is.na(reg$getSummary()$adj.r.squared/reg$getSummary()$r.squared)){
+                             next;
+                           }
+                           if(reg$getSummary()$adj.r.squared/reg$getSummary()$r.squared > highestRightNow || highestRightNow == 0){
+                             highestRightNow = reg$getSummary()$adj.r.squared/reg$getSummary()$r.squared
+                             regen = reg;
+                           }
+                           
+                         }
+                         
+                         
+                         
+                         return(regen)
+                         
                        },
                        
                        chooseBestRSquared = function(medKonstant){
