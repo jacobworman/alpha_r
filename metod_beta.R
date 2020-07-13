@@ -280,8 +280,8 @@ for(z in seq_along(obj_static[[1]][['close']])){
         
         s = linearmod$getSummary()
         
-        if(s$coefficients[,1][[2]] > 1.2
-           && s$coefficients[,1][[2]] < 1.5){
+        if(s$coefficients[,1][[2]] < 1
+          && s$coefficients[,1][[2]] > 0.8 ){
           a_co = c(a_co, companies[[i]])
         }
       }

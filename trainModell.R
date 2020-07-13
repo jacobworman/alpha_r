@@ -132,6 +132,7 @@ seq(1:(length(report[['datum']])- length(utveckling))) + length(report[['datum']
     
     #companies = sample(all_companies, 50)
     z <- random_sample_z[[global_i]]
+    print(z)
     global_i <- global_i + 1
     
     print(obj_static[[1]][['date']][[z]])
@@ -289,6 +290,27 @@ seq(1:(length(report[['datum']])- length(utveckling))) + length(report[['datum']
         new_found = TRUE
         for(i in seq_along(companies)){
           
+          if(
+            #s2$coefficients[,1][[2]] > s$coefficients[,1][[2]]
+            #sd(get_return(serie,21*6)) > 0.25
+            
+            #s$coefficients[,1][[2]] < 1.1
+            #&& s$coefficients[,1][[2]] > 0.7
+            #TRUE
+            framtidaTidsSerie$getIndex(i)$getSharpeRatio() > (avg_sharpe)
+            #TRUE
+            #&&
+            
+            #sd(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span):z], 21*6)) > 0.3
+            #&& mean(framtidaTidsSerie$getIndex(i)$getReturn()) > 0.005
+            #&& 
+            #get_last_item(fordelning) < mean(fordelning) - sd(fordelning)
+          ){
+            
+          }else{
+            next
+          }
+          
           slump = runif(1, min=0, max=100)
           serie = framtidaTidsSerie$getIndex(i)$get()
           n = length(serie)
@@ -366,8 +388,10 @@ seq(1:(length(report[['datum']])- length(utveckling))) + length(report[['datum']
           #print("Spread")
           "print(get_last_item(spread))
           print(sd(spread)*2*-1)"
-          if(get_last_item(spread) < sd(spread)*2*-1 && sec == 1
-             || get_last_item(spread) > sd(spread)*2 && sec == 2){
+          
+          effect = 1
+          if(get_last_item(spread) < sd(spread)*effect*-1 && sec == 1
+             || get_last_item(spread) > sd(spread)*effect && sec == 2){
             print("YEs")
             
           }else{
@@ -404,8 +428,8 @@ seq(1:(length(report[['datum']])- length(utveckling))) + length(report[['datum']
             
             spread <- linearmod$residuals
             
-            if(get_last_item(spread) < sd(spread)*2*-1 && sec == 1
-               || get_last_item(spread) > sd(spread)*2 && sec == 2){
+            if(get_last_item(spread) < sd(spread)*effect*-1 && sec == 1
+               || get_last_item(spread) > sd(spread)*effect && sec == 2){
               
               aList[['x']] = c(aList[['x']], 1)
               
@@ -433,28 +457,11 @@ seq(1:(length(report[['datum']])- length(utveckling))) + length(report[['datum']
           }
           print(s)
           print(s$coefficients[,1][[1]])
-          if(s$coefficients[,1][[1]] < 0.95 || length(df[['x']][ df[['x']] > 0 ]) > 10){
+          if(s$coefficients[,1][[1]] < 0.95 || length(df[['x']][ df[['x']] > 0 ]) < 20){
             next
           }
           
-          if(
-            #s2$coefficients[,1][[2]] > s$coefficients[,1][[2]]
-            #sd(get_return(serie,21*6)) > 0.25
-            
-            #s$coefficients[,1][[2]] < 1.1
-            #&& s$coefficients[,1][[2]] > 0.7
-            framtidaTidsSerie$getIndex(i)$getSharpeRatio() > (avg_sharpe)
-            #&&
-            
-            #sd(get_return(obj_static[[ companies[[i]] ]][['close']][(z-time_span):z], 21*6)) > 0.3
-            #&& mean(framtidaTidsSerie$getIndex(i)$getReturn()) > 0.005
-            #&& 
-            #get_last_item(fordelning) < mean(fordelning) - sd(fordelning)
-          ){
-            
-          }else{
-            next
-          }
+          
           
           np = i
           i = which(companies == co2_name)
@@ -2648,3 +2655,13 @@ s
 
 a = sample(utveckling, 55)
 length(a[a < 1])/length(a)
+
+aggregate(utveckling ~ format(report$datum, "%Y"), report, mean)
+
+report = data.frame()
+mean(utveckling)
+length(utveckling[utveckling < 1])/length(utveckling)
+mean(time_obs)
+mean(utveckling_b)^2
+length(random_sample_z) - length(per_intervall_utveckling)
+mean(utveckling)^(252/18)
